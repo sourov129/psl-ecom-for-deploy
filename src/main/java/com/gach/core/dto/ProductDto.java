@@ -38,6 +38,9 @@ public class ProductDto {
             example = "[/uploads/products/1.jpg, /uploads/products/2.jpg]")
     private List<String> imageUrls;
 
+    @Schema(description = "Stored product images in the database")
+    private List<ProductImageDto> images;
+
     @Schema(description = "Available quantity in stock",
             example = "25",
             minimum = "0")

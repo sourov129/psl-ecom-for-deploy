@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Data
@@ -22,11 +24,12 @@ public class ProductImage {
     private Product product;
 
     @Lob
+    @JdbcTypeCode(SqlTypes.BINARY)
     @Column(name = "image_data", columnDefinition = "BYTEA")
     private byte[] imageData;
 
     private String fileName;
     private String mimeType = "image/jpeg";
-    private Long fileSize; // Size in bytes
+    private Long fileSize;
     private Boolean primaryImage = false;
 }

@@ -2,12 +2,12 @@ package com.gach.core.service;
 
 import com.gach.core.dto.ProductDto;
 import com.gach.core.dto.ProductDetailsDto;
+import com.gach.core.dto.ProductImageDto;
 import com.gach.core.dto.ProductSearchRequest;
 import com.gach.core.entity.Product;
 import com.gach.core.entity.ProductDetails;
 import com.gach.core.entity.ProductImage;
 import com.gach.core.enums.ProductStatus;
-import com.gach.core.repository.ProductDetailsRepository;
 import com.gach.core.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,7 +25,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
-    private final ProductDetailsRepository productDetailsRepository;
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProductServiceImpl.class);
 
     private ProductDto toDto(Product product) {
@@ -44,14 +43,29 @@ public class ProductServiceImpl implements ProductService {
         dto.setProductType(product.getProductType());
         dto.setSaleCount(product.getSaleCount());
 
+        dto.setImageUrls(product.getImages() != null ? product.getImages().stream()
+                .map(img -> img.getFileName() != null ? img.getFileName() : "image")
+                .toList() : Collections.emptyList());
+
+        dto.setImages(product.getImages() != null ? product.getImages().stream()
+                .map(img -> {
+                    ProductImageDto imageDto = new ProductImageDto();
+                    imageDto.setId(img.getId());
+                    imageDto.setFileName(img.getFileName());
+                    imageDto.setMimeType(img.getMimeType());
+                    imageDto.setFileSize(img.getFileSize());
+                    imageDto.setPrimaryImage(Boolean.TRUE.equals(img.getPrimaryImage()));
+                    return imageDto;
+                }).toList() : Collections.emptyList());
+
         ProductDetailsDto detailsDto = new ProductDetailsDto();
-        productDetailsRepository.findByProductId(product.getId()).ifPresent(existing -> {
-            detailsDto.setSize(existing.getSize());
-            detailsDto.setColor(existing.getColor());
-            detailsDto.setMaterial(existing.getMaterial());
-            detailsDto.setFabricType(existing.getFabricType());
-            detailsDto.setCareInstructions(existing.getCareInstructions());
-        });
+        if (product.getDetails() != null) {
+            detailsDto.setSize(product.getDetails().getSize());
+            detailsDto.setColor(product.getDetails().getColor());
+            detailsDto.setMaterial(product.getDetails().getMaterial());
+            detailsDto.setFabricType(product.getDetails().getFabricType());
+            detailsDto.setCareInstructions(product.getDetails().getCareInstructions());
+        }
         dto.setDetails(detailsDto);
         return dto;
     }
@@ -69,32 +83,49 @@ public class ProductServiceImpl implements ProductService {
         product.setSaleCount(dto.getSaleCount());
         product.setStatus(ProductStatus.ACTIVE);
 
-        if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
-            List<ProductImage> images = new ArrayList<>();
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            for (var imageDto : dto.getImages()) {
+                ProductImage image = new ProductImage();
+                image.setProduct(product);
+                image.setFileName(imageDto.getFileName());
+                image.setMimeType(imageDto.getMimeType() != null ? imageDto.getMimeType() : "image/jpeg");
+                image.setFileSize(imageDto.getFileSize());
+                image.setImageData(imageDto.getImageData());
+                image.setPrimaryImage(Boolean.TRUE.equals(imageDto.getPrimaryImage()));
+                product.getImages().add(image);
+            }
+        } else if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
             for (String fileName : dto.getImageUrls()) {
                 ProductImage image = new ProductImage();
                 image.setProduct(product);
                 image.setFileName(fileName);
                 image.setMimeType("image/jpeg");
                 image.setPrimaryImage(fileName.equals(dto.getPrimaryImageUrl()));
-                images.add(image);
+                product.getImages().add(image);
             }
-            product.getImages().addAll(images);
+        }
+
+        if (product.getPrimaryImageUrl() == null && product.getImages() != null) {
+            for (ProductImage image : product.getImages()) {
+                if (Boolean.TRUE.equals(image.getPrimaryImage())) {
+                    product.setPrimaryImageUrl(image.getFileName());
+                    break;
+                }
+            }
+        }
+
+        if (dto.getDetails() != null) {
+            ProductDetails productDetails = new ProductDetails();
+            productDetails.setProduct(product);
+            productDetails.setSize(dto.getDetails().getSize());
+            productDetails.setColor(dto.getDetails().getColor());
+            productDetails.setMaterial(dto.getDetails().getMaterial());
+            productDetails.setFabricType(dto.getDetails().getFabricType());
+            productDetails.setCareInstructions(dto.getDetails().getCareInstructions());
+            product.setDetails(productDetails);
         }
 
         product = productRepository.save(product);
-
-        ProductDetailsDto details = dto.getDetails();
-        if (details != null) {
-            ProductDetails productDetails = new ProductDetails();
-            productDetails.setProductId(product.getId());
-            productDetails.setSize(details.getSize());
-            productDetails.setColor(details.getColor());
-            productDetails.setMaterial(details.getMaterial());
-            productDetails.setFabricType(details.getFabricType());
-            productDetails.setCareInstructions(details.getCareInstructions());
-            productDetailsRepository.save(productDetails);
-        }
 
         return toDto(product);
     }
@@ -135,7 +166,19 @@ public class ProductServiceImpl implements ProductService {
             product.setProductType(dto.getProductType());
             product.setSaleCount(dto.getSaleCount());
 
-            if (dto.getImageUrls() != null) {
+            if (dto.getImages() != null) {
+                product.getImages().clear();
+                for (var imageDto : dto.getImages()) {
+                    ProductImage image = new ProductImage();
+                    image.setProduct(product);
+                    image.setFileName(imageDto.getFileName());
+                    image.setMimeType(imageDto.getMimeType() != null ? imageDto.getMimeType() : "image/jpeg");
+                    image.setFileSize(imageDto.getFileSize());
+                    image.setImageData(imageDto.getImageData());
+                    image.setPrimaryImage(Boolean.TRUE.equals(imageDto.getPrimaryImage()));
+                    product.getImages().add(image);
+                }
+            } else if (dto.getImageUrls() != null) {
                 product.getImages().clear();
                 for (String fileName : dto.getImageUrls()) {
                     ProductImage image = new ProductImage();
@@ -147,16 +190,23 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
 
+            if (product.getPrimaryImageUrl() == null && product.getImages() != null) {
+                product.getImages().stream()
+                        .filter(ProductImage::getPrimaryImage)
+                        .findFirst()
+                        .ifPresent(primary -> product.setPrimaryImageUrl(primary.getFileName()));
+            }
+
             ProductDetailsDto details = dto.getDetails();
             if (details != null) {
-                ProductDetails productDetails = productDetailsRepository.findByProductId(id).orElse(new ProductDetails());
-                productDetails.setProductId(product.getId());
+                ProductDetails productDetails = product.getDetails() != null ? product.getDetails() : new ProductDetails();
+                productDetails.setProduct(product);
                 productDetails.setSize(details.getSize());
                 productDetails.setColor(details.getColor());
                 productDetails.setMaterial(details.getMaterial());
                 productDetails.setFabricType(details.getFabricType());
                 productDetails.setCareInstructions(details.getCareInstructions());
-                productDetailsRepository.save(productDetails);
+                product.setDetails(productDetails);
             }
 
             productRepository.save(product);

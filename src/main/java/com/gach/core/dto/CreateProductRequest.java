@@ -35,6 +35,9 @@ public class CreateProductRequest {
             example = "[/uploads/products/1.jpg, /uploads/products/2.jpg]")
     private List<String> imageUrls;
 
+    @Schema(description = "Product images stored in the database")
+    private List<ProductImageRequest> images;
+
     @Schema(description = "Detailed clothing information")
     private com.gach.core.dto.ProductDetailsDto details;
 }

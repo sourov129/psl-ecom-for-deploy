@@ -12,7 +12,10 @@ public class ProductDetails {
     @SequenceGenerator(name = "product_details_id_seq", sequenceName = "product_details_id_seq", allocationSize = 1)
     private Long id;
 
-    private Long productId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false, unique = true)
+    private Product product;
+
     private String size;
     private String color;
     private String material;

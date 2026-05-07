@@ -1,17 +1,23 @@
 package com.gach.core.security;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Component;
-
 import java.security.Key;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
 @Component
 public class JwtUtil {
-    private final String jwtSecret = "your-256-bit-secret-your-256-bit-secret"; // use at least 256 bits
-    private final long jwtExpirationMs = 86400000 * 30; // 30 days in milliseconds
+    @Value("${jwt.secret:your-256-bit-secret-your-256-bit-secret}")
+    private String jwtSecret;
+    
+    @Value("${jwt.expiration:2592000000}")  // Default: 30 days in milliseconds
+    private long jwtExpirationMs;
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());

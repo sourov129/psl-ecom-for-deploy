@@ -2,6 +2,8 @@ package com.gach.core.controller;
 
 import com.gach.core.dto.CreateProductRequest;
 import com.gach.core.dto.ProductDto;
+import com.gach.core.dto.ProductImageDto;
+import com.gach.core.dto.ProductImageRequest;
 import com.gach.core.dto.ProductSearchRequest;
 import com.gach.core.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+
+import java.util.Base64;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +27,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/products")
-@CrossOrigin(origins = "*")
 @Tag(name = "Products", description = "Product management API with advanced search and filtering")
 public class ProductController {
     private final ProductService productService;
@@ -45,6 +48,21 @@ public class ProductController {
         productDto.setPrimaryImageUrl(request.getPrimaryImageUrl());
         productDto.setImageUrls(request.getImageUrls());
         productDto.setDetails(request.getDetails());
+
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            productDto.setImages(request.getImages().stream().map(imageRequest -> {
+                ProductImageDto imageDto = new ProductImageDto();
+                imageDto.setFileName(imageRequest.getFileName());
+                imageDto.setMimeType(imageRequest.getMimeType());
+                imageDto.setFileSize(imageRequest.getFileSize());
+                imageDto.setPrimaryImage(Boolean.TRUE.equals(imageRequest.getPrimaryImage()));
+                if (imageRequest.getImageData() != null) {
+                    imageDto.setImageData(Base64.getDecoder().decode(imageRequest.getImageData()));
+                }
+                return imageDto;
+            }).toList());
+        }
+
         ProductDto created = productService.addProduct(productDto);
         return ResponseEntity.ok(created);
     }
