@@ -14,7 +14,7 @@ public class MailService {
     public void sendOtpEmail(String to, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
-        message.setSubject("Your Gach.com OTP");
+        message.setSubject("Your PaiSoft OTP");
         message.setText("Your OTP is: " + otp + " (valid for 5 minutes)");
         mailSender.send(message);
     }
