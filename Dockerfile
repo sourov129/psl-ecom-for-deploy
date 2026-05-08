@@ -2,8 +2,10 @@ FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
-COPY build/libs/core-0.0.1-SNAPSHOT.jar app.jar
+COPY . .
+
+RUN ./gradlew build
 
 EXPOSE 8080
 
-ENTRYPOINT ["java","-jar","app.jar"]
+CMD ["java","-jar","build/libs/core-0.0.1-SNAPSHOT.jar"]
